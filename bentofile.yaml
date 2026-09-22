@@ -1,6 +1,6 @@
 service: "xray.ml.model.model_service:svc"
 labels:
-    owner: ineuron-team
+    owner: ansh
     stage: dev
 include:
     - "xray/ml/model/*"
