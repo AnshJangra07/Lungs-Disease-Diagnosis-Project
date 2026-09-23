@@ -87,7 +87,7 @@ class ModelTrainerConfig:
 class ModelEvaluationConfig:
     def __init__(self):
         self.device: device = DEVICE
-        self.minimum_accuracy: float = 80.0
+        self.minimum_accuracy: float = 90.0
 
 
 # Model Pusher Configurations

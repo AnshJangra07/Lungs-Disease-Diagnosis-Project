@@ -10,107 +10,19 @@ The project combines a PyTorch CNN with a modular training pipeline, Amazon S3 d
 
 The latest local training run achieved **95.22% test accuracy** on `1,171` test images. Accuracy alone is not sufficient for medical use, so the evaluation pipeline also records precision, recall, F1-score, and a confusion matrix.
 
-Evaluation metrics: accuracy=95.22% precision=96.51% recall=96.96% f1=96.73% confusion_matrix=[[286, 30], [26, 829]]
+Evaluation metrics:
+
+- accuracy=95.22%
+- precision=96.51%
+- recall=96.96%
+- f1=96.73%
+- confusion_matrix=[[286, 30], [26, 829]]
 
 ## Architecture
 
-https://user-images.githubusercontent.com/71321529/216753362-aeb34400-d21d-4b21-b2ce-63b86a47b594.jpg
+![Project architecture](./Archi.png)
 
-```text
-Amazon S3
-	|
-	v
-Data ingestion -> Data transformation -> PyTorch training
-									  |
-									  v
-						 Evaluation and quality gate
-									  |
-									  v
-					   BentoML -> Docker -> Amazon ECR
-									  |
-									  v
-						 AWS deployment or local serving
-```
-
-The model is pushed only when it passes the configured minimum accuracy threshold, currently `80%`.
-
-## Pipeline Components
-
-The training pipeline is divided into independent components. Each component receives a typed artifact or configuration object and returns the output required by the next stage.
-
-### 1. Data Ingestion
-
-**File:** `xray/components/data_ingestion.py`
-
-- Connects to the configured Amazon S3 bucket through `S3Operation`.
-- Synchronizes the `data/` folder into a timestamped local artifact directory.
-- Creates a `DataIngestionArtifact` containing the train and test paths.
-- Keeps cloud-storage logic separate from the rest of the ML pipeline.
-
-### 2. Data Transformation
-
-**File:** `xray/components/data_transformation.py`
-
-- Loads images using `torchvision.datasets.ImageFolder`.
-- Applies training augmentation: resize, center crop, color jitter, horizontal flip, and random rotation.
-- Applies deterministic test preprocessing without augmentation.
-- Creates PyTorch `DataLoader` objects with batch size `16`.
-- Shuffles training data while keeping test data order deterministic.
-- Saves the transform objects with `joblib` for reproducibility.
-
-### 3. Model Training
-
-**File:** `xray/components/model_training.py`
-
-- Creates the custom CNN defined in `xray/ml/model/arch.py`.
-- Trains with negative log-likelihood loss and SGD optimization.
-- Uses a `StepLR` learning-rate scheduler.
-- Reports batch loss, training accuracy, test loss, and test accuracy after each epoch.
-- Saves the PyTorch state dictionary to the timestamped `artifacts/` directory.
-- Registers the trained model in the BentoML model store as `xray_model`.
-
-### 4. Model Evaluation
-
-**File:** `xray/components/model_evaluation.py`
-
-- Loads the saved model weights with CPU/GPU device mapping.
-- Runs inference on the deterministic test loader without gradients.
-- Calculates accuracy, precision, recall, and F1-score.
-- Generates a binary confusion matrix in `[NORMAL, PNEUMONIA]` order.
-- Returns all metrics through a `ModelEvaluationArtifact`.
-
-### 5. Model Quality Gate
-
-**File:** `xray/pipeline/train_pipeline.py`
-
-- Compares the evaluation accuracy with `ModelEvaluationConfig.minimum_accuracy`.
-- Stops the pipeline when the model is below the configured threshold.
-- Calls the model pusher only after the quality gate passes.
-- Prevents an underperforming model from being containerized or published.
-
-### 6. Model Pusher
-
-**File:** `xray/components/model_pusher.py`
-
-- Builds a Bento from `bentofile.yaml`.
-- Captures the exact generated Bento tag instead of assuming a `latest` tag.
-- Containerizes the Bento using Docker.
-- Resolves the AWS account ID through STS instead of hardcoding a registry account.
-- Authenticates with Amazon ECR and pushes `xray_bento_image:latest`.
-
-### 7. Serving Layer
-
-**BentoML:** `xray/ml/model/model_service.py`
-
-- Loads the bundled `xray_model` artifact.
-- Applies the same resize and normalization preprocessing used during testing.
-- Returns the predicted class label from the BentoML API.
-
-**FastAPI fallback:** `app.py`
-
-- Provides a simple local `/predict` endpoint.
-- Loads `MODEL_PATH` when explicitly configured.
-- Otherwise selects the newest pipeline-generated `model.pt` artifact.
+The model is pushed only when it passes the configured minimum accuracy threshold, currently `90%`.
 
 ## Project Structure
 
@@ -126,8 +38,15 @@ The training pipeline is divided into independent components. Each component rec
 ├── notebook/                      # Experiments and investigations
 ├── flowcharts/                    # Design and pipeline diagrams
 ├── xray/
-│   ├── components/                # Ingestion, transformation, training, evaluation
+│   ├── components/
+│   │   ├── data_ingestion.py      # Download training data from Amazon S3
+│   │   ├── data_transformation.py # Augment images and create DataLoaders
+│   │   ├── model_training.py      # Train and register the PyTorch CNN
+│   │   ├── model_evaluation.py    # Calculate metrics and confusion matrix
+│   │   └── model_pusher.py        # Build, containerize, and push the model
 │   ├── entity/                    # Pipeline artifacts and configuration
+│   │   ├── artifacts_entity.py    # Outputs exchanged between components
+│   │   └── config_entity.py        # Component and pipeline configuration
 │   ├── ml/model/                  # CNN architecture and BentoML service
 │   └── pipeline/                  # End-to-end training orchestration
 ├── data/                          # Local dataset, generated and ignored
