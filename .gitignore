@@ -138,3 +138,13 @@ artifacts/
 __pycache__/
 *.pyc
 .env
+
+# Local ML and deployment outputs
+.bentoml/
+data/
+logs/
+artifacts/
+*.pth
+
+# Notebook runtime files
+notebook/.ipynb_checkpoints/
