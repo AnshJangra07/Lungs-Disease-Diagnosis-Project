@@ -1,4 +1,4 @@
-import os
+import subprocess
 import sys
 
 from xray.entity.artifacts_entity import ModelPusherArtifact
@@ -17,31 +17,56 @@ class ModelPusher:
         try:
             logging.info("Building the bento from bentofile.yaml")
 
-            os.system("bentoml build")
+            subprocess.run(["bentoml", "build"], check=True)
 
             logging.info("Built the bento from bentofile.yaml")
 
             logging.info("Creating docker image for bento")
 
-            os.system(
-                f"bentoml containerize {self.model_pusher_config.bentoml_service_name}:latest -t 566373416292.dkr.ecr.us-east-1.amazonaws.com/{self.model_pusher_config.bentoml_ecr_image}:latest"
+            image = (
+                "566373416292.dkr.ecr.us-east-1.amazonaws.com/"
+                f"{self.model_pusher_config.bentoml_ecr_image}:latest"
+            )
+            subprocess.run(
+                [
+                    "bentoml",
+                    "containerize",
+                    f"{self.model_pusher_config.bentoml_service_name}:latest",
+                    "-t",
+                    image,
+                ],
+                check=True,
             )
 
             logging.info("Created docker image for bento")
 
             logging.info("Logging into ECR")
 
-            os.system(
-                "aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 566373416292.dkr.ecr.us-east-1.amazonaws.com"
+            login = subprocess.run(
+                ["aws", "ecr", "get-login-password", "--region", "us-east-1"],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            subprocess.run(
+                [
+                    "docker",
+                    "login",
+                    "--username",
+                    "AWS",
+                    "--password-stdin",
+                    "566373416292.dkr.ecr.us-east-1.amazonaws.com",
+                ],
+                input=login.stdout,
+                text=True,
+                check=True,
             )
 
             logging.info("Logged into ECR")
 
             logging.info("Pushing bento image to ECR")
 
-            os.system(
-                f"docker push 566373416292.dkr.ecr.us-east-1.amazonaws.com/{self.model_pusher_config.bentoml_ecr_image}:latest"
-            )
+            subprocess.run(["docker", "push", image], check=True)
 
             logging.info("Pushed bento image to ECR")
 

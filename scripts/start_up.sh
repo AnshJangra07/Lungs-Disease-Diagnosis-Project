@@ -1,4 +1,5 @@
-#!bin/bash
+#!/bin/bash
+set -euo pipefail
 
 echo "Updating system packages"
 

@@ -55,7 +55,8 @@ class ModelTrainer:
             processed = 0
 
             for batch_idx, (data, target) in enumerate(pbar):
-                data, target = data.to(DEVICE), target.to(DEVICE)
+                data = data.to(self.model_trainer_config.device)
+                target = target.to(self.model_trainer_config.device)
 
                 # Initialization of gradient
                 optimizer.zero_grad()
@@ -113,7 +114,8 @@ class ModelTrainer:
                     data,
                     target,
                 ) in self.data_transformation_artifact.transformed_test_object:
-                    data, target = data.to(DEVICE), target.to(DEVICE)
+                    data = data.to(self.model_trainer_config.device)
+                    target = target.to(self.model_trainer_config.device)
 
                     output = self.model(data)
 
@@ -183,15 +185,13 @@ class ModelTrainer:
 
                 self.train(optimizer=optimizer)
 
-                optimizer.step()
-
                 scheduler.step()
 
                 self.test()
 
             os.makedirs(self.model_trainer_config.artifact_dir, exist_ok=True)
 
-            torch.save(model, self.model_trainer_config.trained_model_path)
+            torch.save(model.state_dict(), self.model_trainer_config.trained_model_path)
 
             train_transforms_obj = joblib.load(
                 self.data_transformation_artifact.train_transform_file_path

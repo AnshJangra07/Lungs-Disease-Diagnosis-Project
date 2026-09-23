@@ -8,7 +8,7 @@ TIMESTAMP: datetime = datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
 # Data Ingestion Constants
 ARTIFACT_DIR: str = "artifacts"
 
-BUCKET_NAME: str = "lungxray"
+BUCKET_NAME: str = "ansh-lungs-disease-model"
 
 S3_DATA_FOLDER: str = "data"
 
@@ -65,4 +65,4 @@ BENTOML_SERVICE_NAME: str = "xray_service"
 
 BENTOML_ECR_IMAGE: str = "xray_bento_image"
 
-PREDICTION_LABEL: dict = {"0": CLASS_LABEL_1, 1: CLASS_LABEL_2}
+PREDICTION_LABEL: dict = {0: CLASS_LABEL_1, 1: CLASS_LABEL_2}

@@ -1,15 +1,15 @@
 service: "xray.ml.model.model_service:svc"
 labels:
-    owner: ansh
-    stage: dev
+  owner: ansh
+  stage: dev
 include:
-    - "xray/ml/model/*"
-    - "xray/constant/training_pipeline/__init__.py"
+  - "xray/ml/model/*"
+  - "xray/constant/training_pipeline/__init__.py"
 python:
-    packages:
-        - torch
-        - torchvision
-        - Pillow
-        - numpy
-    extra_index_url:
-        - "https://download.pytorch.org/whl/cpu"
+  packages:
+    - bentoml==1.3.10
+    - importlib-metadata>=6.0,<7.0
+    - torch
+    - torchvision
+    - Pillow
+    - numpy

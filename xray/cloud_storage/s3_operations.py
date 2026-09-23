@@ -1,4 +1,4 @@
-import os
+import subprocess
 import sys
 
 from xray.exception import XRayException
@@ -7,22 +7,20 @@ from xray.exception import XRayException
 class S3Operation:
     def sync_folder_to_s3(self, folder: str, bucket_name: str, bucket_folder_name: str) -> None:
         try:
-            command: str = (
-                f"aws s3 sync {folder} s3://{bucket_name}/{bucket_folder_name}/ "
+            subprocess.run(
+                ["aws", "s3", "sync", folder, f"s3://{bucket_name}/{bucket_folder_name}/"],
+                check=True,
             )
-
-            os.system(command)
 
         except Exception as e:
             raise XRayException(e, sys)
 
     def sync_folder_from_s3(self, folder: str, bucket_name: str, bucket_folder_name: str) -> None:
         try:
-            command: str = (
-                f"aws s3 sync s3://{bucket_name}/{bucket_folder_name}/ {folder} "
+            subprocess.run(
+                ["aws", "s3", "sync", f"s3://{bucket_name}/{bucket_folder_name}/", folder],
+                check=True,
             )
-
-            os.system(command)
 
         except Exception as e:
             raise XRayException(e, sys)

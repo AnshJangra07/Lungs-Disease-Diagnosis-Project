@@ -2,7 +2,7 @@ import sys
 from typing import Tuple
 
 import torch
-from torch.nn import CrossEntropyLoss, Module
+from torch.nn import Module, NLLLoss
 from torch.optim import SGD, Optimizer
 from torch.utils.data import DataLoader
 
@@ -40,12 +40,17 @@ class ModelEvaluation:
          )
 
          model: Module = Net()
-
-         model: Module = torch.load(self.model_trainer_artifact.trained_model_path)
+         model.load_state_dict(
+            torch.load(
+               self.model_trainer_artifact.trained_model_path,
+               map_location=self.model_evaluation_config.device,
+               weights_only=True,
+            )
+         )
 
          model.to(self.model_evaluation_config.device)
 
-         cost: Module = CrossEntropyLoss()
+         cost: Module = NLLLoss()
 
          optimizer: Optimizer = SGD(
                model.parameters(), **self.model_evaluation_config.optimizer_params
