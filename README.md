@@ -1,28 +1,47 @@
-#  Xray Lung Classifier
+# X-ray Lung Classifier
 
-## Problem statement
-Pneumonia is an inflammatory condition of the lung affecting primarily the small air sacs known as alveoli.Symptoms typically include some combination of productive or dry cough, chest pain, fever and difficulty breathing. The severity of the condition is variable. Pneumonia is usually caused by infection with viruses or bacteria and less commonly by other microorganisms, certain medications or conditions such as autoimmune diseases.Risk factors include cystic fibrosis, chronic obstructive pulmonary disease (COPD), asthma, diabetes, heart failure, a history of smoking, a poor ability to cough such as following a stroke and a weak immune system. Diagnosis is often based on symptoms and physical examination. Chest X-ray, blood tests, and culture of the sputum may help confirm the diagnosis.The disease may be classified by where it was acquired, such as community- or hospital-acquired or healthcare-associated pneumonia.
-Our task is to create a API whichs predict whether the given images are penumonia or not.
+This project is a proof of concept for classifying chest X-ray images as `NORMAL` or `PNEUMONIA` with PyTorch. It is intended for research and portfolio use only, not for clinical diagnosis.
 
-## Solution Proposed
-The solution proposed for the above problem is that we have used Computer vision to solve the above problem to classify the data. We have used the Pytorch
-framework to solve the above problem also we have have created our custom CNN network with the help of pytorch. Then we have created a API which takes in the images and predicts wheter a person is having Pneumonia or not. Then we have dockerized the application and deployed the model on AWS cloud.
+## Pipeline
 
+```text
+Amazon S3 -> data ingestion -> image transforms -> PyTorch training
+		  -> evaluation and quality gate -> BentoML -> Docker -> Amazon ECR
+```
 
-![xray_arch](https://user-images.githubusercontent.com/71321529/216753362-aeb34400-d21d-4b21-b2ce-63b86a47b594.jpg)
+The training pipeline downloads data from S3, creates reproducible artifacts, trains the CNN, evaluates accuracy, precision, recall, F1-score, and a confusion matrix, and pushes a BentoML image only when the configured accuracy threshold is met. The current default threshold is 80%.
 
-## Dataset used
-The dataset was shared by Apollo diagnostic center for research purpose. So we hvae created a POC with the given data.
+The primary serving path is BentoML in `xray/ml/model/model_service.py`. The FastAPI application in `app.py` remains available as a local fallback and loads `MODEL_PATH` when set, otherwise the newest pipeline-produced model artifact.
 
-## Tech Stack Used
-1. Python 
-2. FastAPI 
-3. Pytorch
-4. Docker
-5. AWS
-6. Azure
+## Local usage
 
-## Infrastructure required
-1. AWS S3
-2. AWS App Runner
-3. Github Actions
+Install the pinned dependencies in a virtual environment:
+
+```bash
+pip install -r requirements.txt
+```
+
+Run the training pipeline after configuring AWS credentials and access to the project S3 bucket:
+
+```bash
+python train.py
+```
+
+The local fallback API can be started with:
+
+```bash
+uvicorn app:app --reload
+```
+
+For BentoML serving, the pipeline saves `xray_model` and the service is defined in `bentofile.yaml`.
+
+## Dataset
+
+The dataset contains `NORMAL` and `PNEUMONIA` image folders for training and testing. The data is used as a research proof of concept; dataset provenance and clinical performance should be independently verified before any real-world use.
+
+## Technology
+
+- Python and PyTorch
+- BentoML and Docker
+- Amazon S3 and Amazon ECR
+- GitHub Actions with AWS OIDC authentication

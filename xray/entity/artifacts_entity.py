@@ -22,6 +22,10 @@ class ModelTrainerArtifact:
 @dataclass
 class ModelEvaluationArtifact:
     model_accuracy: float
+    model_precision: float
+    model_recall: float
+    model_f1_score: float
+    confusion_matrix: list[list[int]]
 
 
 @dataclass

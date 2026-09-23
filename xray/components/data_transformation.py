@@ -108,7 +108,11 @@ class DataTransformation:
             )
 
             test_loader: DataLoader = DataLoader(
-                test_data, **self.data_transformation_config.data_loader_params
+                test_data,
+                **{
+                    **self.data_transformation_config.data_loader_params,
+                    "shuffle": False,
+                },
             )
 
             logging.info("Exited the data_loader method of Data transformation class")

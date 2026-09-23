@@ -1,19 +1,32 @@
 # fast api application for x-ray image classification
 
+import os
+from pathlib import Path
+
 import torch
-from xray.ml.model.arch import Net  # Ensure this path is correct
+from xray.ml.model.arch import Net
 import torchvision.transforms as transforms
 from PIL import Image
 from fastapi import FastAPI, UploadFile, File, HTTPException
-from pathlib import Path
 
 app = FastAPI()
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Initialize and load model weights
 model = Net().to(device)
-model_path = Path(__file__).resolve().with_name("xray_model.pth")
+artifact_models = list(Path("artifacts").glob("*/model_training/model.pt"))
+model_path = Path(
+    os.getenv(
+        "MODEL_PATH",
+        str(max(artifact_models, key=lambda path: path.stat().st_mtime))
+        if artifact_models
+        else "",
+    )
+)
+if not model_path.is_file():
+    raise FileNotFoundError(
+        "No trained model found. Set MODEL_PATH or run the training pipeline first."
+    )
 model.load_state_dict(torch.load(model_path, map_location=device, weights_only=True))
 model.eval()
 

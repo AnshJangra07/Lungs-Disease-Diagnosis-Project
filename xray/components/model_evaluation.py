@@ -3,7 +3,6 @@ from typing import Tuple
 
 import torch
 from torch.nn import Module, NLLLoss
-from torch.optim import SGD, Optimizer
 from torch.utils.data import DataLoader
 
 from xray.entity.artifacts_entity import (
@@ -31,7 +30,7 @@ class ModelEvaluation:
 
       self.model_trainer_artifact = model_trainer_artifact
 
-   def configuration(self) -> Tuple[DataLoader, Module, float, Optimizer]:
+   def configuration(self) -> Tuple[DataLoader, Module, Module]:
       logging.info("Entered the configuration method of Model evaluation class")
 
       try:
@@ -52,70 +51,58 @@ class ModelEvaluation:
 
          cost: Module = NLLLoss()
 
-         optimizer: Optimizer = SGD(
-               model.parameters(), **self.model_evaluation_config.optimizer_params
-         )
-
          model.eval()
 
          logging.info("Exited the configuration method of Model evaluation class")
 
-         return test_dataloader, model, cost, optimizer
+         return test_dataloader, model, cost
 
       except Exception as e:
          raise XRayException(e, sys)
 
-   def test_net(self) -> float:
+   def test_net(self) -> tuple[float, float, float, float, list[list[int]]]:
       logging.info("Entered the test_net method of Model evaluation class")
 
       try:
-         test_dataloader, net, cost, _ = self.configuration()
+         test_dataloader, model, cost = self.configuration()
+         true_labels: list[int] = []
+         predicted_labels: list[int] = []
+         total_loss = 0.0
 
          with torch.no_grad():
-               holder = []
-
-               for _, data in enumerate(test_dataloader):
-                  images = data[0].to(self.model_evaluation_config.device)
-
-                  labels = data[1].to(self.model_evaluation_config.device)
-
-                  output = net(images)
-
+               for images, labels in test_dataloader:
+                  images = images.to(self.model_evaluation_config.device)
+                  labels = labels.to(self.model_evaluation_config.device)
+                  output = model(images)
                   loss = cost(output, labels)
+                  predictions = torch.argmax(output, dim=1)
 
-                  predictions = torch.argmax(output, 1)
+                  true_labels.extend(labels.cpu().tolist())
+                  predicted_labels.extend(predictions.cpu().tolist())
+                  total_loss += loss.item() * labels.size(0)
 
-                  for i in zip(images, labels, predictions):
-                     h = list(i)
+         if not true_labels:
+            raise ValueError("The evaluation dataset is empty")
 
-                     holder.append(h)
+         true_positive = sum(actual == 1 and predicted == 1 for actual, predicted in zip(true_labels, predicted_labels))
+         false_positive = sum(actual == 0 and predicted == 1 for actual, predicted in zip(true_labels, predicted_labels))
+         false_negative = sum(actual == 1 and predicted == 0 for actual, predicted in zip(true_labels, predicted_labels))
+         true_negative = sum(actual == 0 and predicted == 0 for actual, predicted in zip(true_labels, predicted_labels))
 
-                  logging.info(
-                     f"Actual_Labels : {labels}     Predictions : {predictions}     labels : {loss.item():.4f}"
-                  )
+         accuracy = sum(actual == predicted for actual, predicted in zip(true_labels, predicted_labels)) / len(true_labels) * 100
+         precision = true_positive / (true_positive + false_positive) if true_positive + false_positive else 0.0
+         recall = true_positive / (true_positive + false_negative) if true_positive + false_negative else 0.0
+         f1_score = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
+         confusion_matrix = [[true_negative, false_positive], [false_negative, true_positive]]
 
-                  self.model_evaluation_config.test_loss += loss.item()
-
-                  self.model_evaluation_config.test_accuracy += (
-                     (predictions == labels).sum().item()
-                  )
-
-                  self.model_evaluation_config.total_batch += 1
-
-                  self.model_evaluation_config.total += labels.size(0)
-
-                  logging.info(
-                     f"Model  -->   Loss : {self.model_evaluation_config.test_loss/ self.model_evaluation_config.total_batch} Accuracy : {(self.model_evaluation_config.test_accuracy / self.model_evaluation_config.total) * 100} %"
-                  )
-
-         accuracy = (
-               self.model_evaluation_config.test_accuracy
-               / self.model_evaluation_config.total
-         ) * 100
-
+         logging.info(
+            "Evaluation metrics: loss=%.4f accuracy=%.2f%% precision=%.2f%% recall=%.2f%% f1=%.2f%% confusion_matrix=%s",
+            total_loss / len(true_labels), accuracy, precision * 100, recall * 100,
+            f1_score * 100, confusion_matrix,
+         )
          logging.info("Exited the test_net method of Model evaluation class")
 
-         return accuracy
+         return accuracy, precision * 100, recall * 100, f1_score * 100, confusion_matrix
 
       except Exception as e:
          raise XRayException(e, sys)
@@ -126,10 +113,16 @@ class ModelEvaluation:
       )
 
       try:
-         accuracy = self.test_net()
+         accuracy, precision, recall, f1_score, confusion_matrix = self.test_net()
 
          model_evaluation_artifact: ModelEvaluationArtifact = (
-               ModelEvaluationArtifact(model_accuracy=accuracy)
+               ModelEvaluationArtifact(
+                  model_accuracy=accuracy,
+                  model_precision=precision,
+                  model_recall=recall,
+                  model_f1_score=f1_score,
+                  confusion_matrix=confusion_matrix,
+               )
          )
 
          logging.info(

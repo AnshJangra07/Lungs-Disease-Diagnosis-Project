@@ -168,6 +168,13 @@ class TrainPipeline:
                 )
             )
 
+            if model_evaluation_artifact.model_accuracy < self.model_evaluation_config.minimum_accuracy:
+                raise Exception(
+                    f"Model accuracy {model_evaluation_artifact.model_accuracy:.2f}% "
+                    f"is below the required threshold of {self.model_evaluation_config.minimum_accuracy:.2f}%."
+                )
+
+
             model_pusher_artifact = self.start_model_pusher()
 
             logging.info("Exited the run_pipeline method of TrainPipeline class")

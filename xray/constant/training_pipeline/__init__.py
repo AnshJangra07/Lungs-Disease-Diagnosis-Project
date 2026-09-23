@@ -40,9 +40,9 @@ TRAIN_TRANSFORMS_FILE: str = "train_transforms.pkl"
 
 TEST_TRANSFORMS_FILE: str = "test_transforms.pkl"
 
-BATCH_SIZE: int = 2
+BATCH_SIZE: int = 16
 
-SHUFFLE: bool = False
+SHUFFLE: bool = True
 
 PIN_MEMORY: bool = True
 

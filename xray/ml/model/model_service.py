@@ -1,18 +1,9 @@
-import io
-
 import bentoml
 import torch
-from bentoml.io import Image, Text
 from PIL import Image as PILImage
 from torchvision import transforms
 
 from xray.constant.training_pipeline import *
-
-bento_model = bentoml.pytorch.get(BENTOML_MODEL_NAME)
-
-runner = bento_model.to_runner()
-
-svc = bentoml.Service(name=BENTOML_SERVICE_NAME, runners=[runner])
 
 inference_transform = transforms.Compose(
     [
@@ -26,20 +17,21 @@ inference_transform = transforms.Compose(
 )
 
 
-@svc.api(input=Image(allowed_mime_types=["image/jpeg", "image/png"]), output=Text())
-async def predict(img):
-    b = io.BytesIO()
+@bentoml.service(name=BENTOML_SERVICE_NAME)
+class XRayService:
+    def __init__(self):
+        self.model = bentoml.pytorch.load_model(
+            BENTOML_MODEL_NAME,
+            weights_only=False,
+        )
+        self.model.eval()
 
-    img.save(b, "jpeg")
+    @bentoml.api
+    def predict(self, img: PILImage.Image) -> str:
+        image = inference_transform(img.convert("RGB")).unsqueeze(0)
 
-    im_bytes = b.getvalue()
+        with torch.no_grad():
+            output = self.model(image)
 
-    image = PILImage.open(io.BytesIO(im_bytes)).convert("RGB")
-    image = inference_transform(image).unsqueeze(0)
-
-    batch_ret = await runner.async_run(image)
-
-    prediction_index = torch.argmax(batch_ret, dim=1).item()
-    pred = PREDICTION_LABEL[prediction_index]
-
-    return pred
+        prediction_index = torch.argmax(output, dim=1).item()
+        return PREDICTION_LABEL[prediction_index]
