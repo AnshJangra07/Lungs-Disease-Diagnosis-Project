@@ -10,7 +10,7 @@ The project combines a PyTorch CNN with a modular training pipeline, Amazon S3 d
 
 The latest local training run achieved **95.22% test accuracy** on `1,171` test images. Accuracy alone is not sufficient for medical use, so the evaluation pipeline also records precision, recall, F1-score, and a confusion matrix.
 
-Evaluation metrics:  accuracy=95.22% precision=96.51% recall=96.96% f1=96.73% confusion_matrix=[[286, 30], [26, 829]]
+Evaluation metrics: accuracy=95.22% precision=96.51% recall=96.96% f1=96.73% confusion_matrix=[[286, 30], [26, 829]]
 
 ## Architecture
 
