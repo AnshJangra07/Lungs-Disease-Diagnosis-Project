@@ -2,7 +2,6 @@
 
 An end-to-end computer vision and MLOps project that classifies chest X-ray images into `NORMAL` and `PNEUMONIA` classes.
 
-> **Important:** This project is a research and portfolio proof of concept. It is not a medical device and must not be used as a substitute for professional clinical diagnosis.
 
 ## Overview
 
@@ -168,12 +167,5 @@ data/
 	├── NORMAL/
 	└── PNEUMONIA/
 ```
-
-## Limitations
-
-- The model is a proof of concept and has not been clinically validated.
-- Reported metrics depend on the dataset split and should not be interpreted as clinical performance.
-- The current architecture is a custom CNN; transfer learning and calibration are possible future improvements.
-- Docker images include the PyTorch runtime and can be large, especially when CUDA dependencies are installed.
 
 More detail is available in [docs/architecture.md](docs/architecture.md).
